@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="Live counter-pick assistant for Honor of Kings drafts">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DraftAce">
+<meta name="application-name" content="DraftAce">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Ctext x='32' y='44' font-size='26' text-anchor='middle' fill='%23f5c04a' font-weight='bold'%3EDA%3C/text%3E%3C/svg%3E">
+<title>DraftAce — Honor of Kings Live Counter-Picks</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --bg:#0b1020; --bg2:#101830; --card:#151f3a; --card2:#1a2547;
+    --line:#26325c; --txt:#eef2ff; --dim:#93a0c9; --gold:#f5c04a; --violet:#8b7bff;
+    --clash:#ff8a5c; --jungle:#c07bff; --mid:#6bb6ff; --farm:#ffd166; --roam:#5fe3a1;
+    --red:#ff6a4d; --blue:#4da3ff;
+  }
+  html{scroll-behavior:smooth}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #182450 0%, var(--bg) 55%);
+    color:var(--txt); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height:100vh; touch-action:manipulation; overscroll-behavior:none;
+  }
+  button,.tile,.slot,.pcell,.liverow,.reccard,.hrow,.bancard,.vschip{-webkit-user-select:none;user-select:none;}
+  #app{max-width:520px; margin:0 auto; min-height:100vh; padding-bottom:96px; position:relative;}
+
+  /* ---------- header ---------- */
+  header{
+    padding:calc(env(safe-area-inset-top, 0px) + 16px) 16px 12px;
+    background:linear-gradient(135deg, rgba(245,192,74,.14), rgba(139,123,255,.14));
+    border-bottom:1px solid var(--line);
+  }
+  .logo{display:flex; align-items:center; gap:10px;}
+  .logo .badge{
+    width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-size:21px;background:linear-gradient(135deg,#f5c04a,#d98a1f);box-shadow:0 4px 14px rgba(245,192,74,.35);
+  }
+  .logo h1{font-size:18px;letter-spacing:.4px;}
+  .logo h1 span{color:var(--gold);}
+  .logo p{color:var(--dim);font-size:11.5px;margin-top:1px;}
+  .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#3dff8f;margin-right:5px;animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  main{padding:12px 14px 0;}
+
+  /* ---------- cards ---------- */
+  .card{
+    background:linear-gradient(180deg,var(--card),var(--bg2));
+    border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:10px;
+  }
+  .card h2{font-size:14px; margin-bottom:9px; display:flex; align-items:center; gap:8px;}
+  .card h2 .hint{color:var(--dim); font-weight:400; font-size:10.5px;}
+
+  .helpcard{
+    background:rgba(139,123,255,.08);border:1px solid var(--line);border-radius:14px;
+    padding:10px 12px;margin-bottom:10px;font-size:11.5px;color:var(--dim);line-height:1.5;position:relative;
+  }
+  .helpcard b{color:var(--txt);}
+  .helpcard .x{position:absolute;top:6px;right:10px;border:none;background:none;color:var(--dim);font-size:16px;cursor:pointer;padding:4px;}
+  .installcard{
+    background:linear-gradient(135deg,rgba(245,192,74,.15),rgba(245,192,74,.04));
+    border:1px solid rgba(245,192,74,.5);border-radius:14px;padding:11px 12px;margin-bottom:10px;
+    font-size:11.5px;color:var(--dim);line-height:1.55;position:relative;padding-right:30px;
+  }
+  .installcard b{color:var(--gold);}
+  .installcard .x{position:absolute;top:6px;right:10px;border:none;background:none;color:var(--dim);font-size:16px;cursor:pointer;padding:4px;}
+  kbd{background:#22305c;border-radius:5px;padding:1px 6px;font-size:10px;font-family:inherit;color:var(--gold);}
+
+  /* ---------- slots (compact) ---------- */
+  .slots{display:flex; gap:7px; justify-content:space-between;}
+  .slot{width:57px; cursor:pointer; text-align:center; position:relative; flex:none;}
+  .slot .circ{
+    width:53px;height:53px;border-radius:50%;margin:0 auto;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:15px;color:#fff;position:relative;
+    border:2px dashed #3a4a80; background:rgba(255,255,255,.03);
+    transition:transform .1s ease;
+  }
+  .slot:active .circ{transform:scale(.92);}
+  .slot.empty .circ{color:#5a6a9e; font-size:21px;}
+  .slot .nm{font-size:9px;color:var(--dim);margin-top:4px;line-height:1.15;min-height:20px;}
+  .slot .rm{
+    position:absolute; top:-4px; right:0; width:18px;height:18px;border-radius:50%;
+    background:#e14d2e;color:#fff;font-size:11px;line-height:18px;text-align:center;border:none;cursor:pointer;z-index:2;
+  }
+  .teamrow{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .teamrow:last-child{margin-bottom:0;}
+  .teamtag{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;flex:none;width:34px;text-align:center;}
+  .teamtag.foe{color:#ff9a86;}
+  .teamtag.me{color:#8fc2ff;}
+
+  /* ---------- live panel (sticky) ---------- */
+  .stickybar{position:sticky;top:0;z-index:15;background:linear-gradient(180deg,var(--bg) 78%,transparent);padding:6px 0;margin:-6px 0 8px;}
+  .livep{
+    background:linear-gradient(135deg,#16224a,#101a38);border:1px solid rgba(245,192,74,.35);
+    border-radius:16px;padding:11px 12px;box-shadow:0 6px 22px rgba(0,0,0,.4);
+  }
+  .livehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .livehead .t{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--gold);font-weight:800;}
+  .livehead .s{font-size:10px;color:var(--dim);}
+  .liverow{
+    display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:11px;cursor:pointer;
+    background:rgba(255,255,255,.035);border:1px solid var(--line);margin-bottom:6px;
+  }
+  .liverow:active{transform:scale(.99);}
+  .liverow .nm{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:7px;}
+  .liverow .lchip{font-size:9px;font-weight:700;padding:2px 6px;border-radius:7px;border:1px solid var(--line);color:var(--dim);}
+  .liverow .rs{font-size:10.5px;color:var(--dim);margin-top:2px;line-height:1.3;
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
+  .liverow .info{flex:1;min-width:0;}
+  .pickn{
+    width:18px;height:18px;border-radius:6px;background:linear-gradient(135deg,#f5c04a,#d98a1f);
+    color:#1a1300;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .livebans{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .liveban{
+    display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:#ffc4b5;
+    background:rgba(255,106,77,.1);border:1px solid rgba(255,106,77,.35);border-radius:18px;padding:4px 9px 4px 4px;cursor:pointer;color:var(--txt);
+  }
+  .liveban .circ{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:800;color:#fff;}
+  .livenotes{margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+  .livenote{font-size:10.5px;color:#c6cfe9;line-height:1.4;display:flex;gap:6px;}
+  .emptyhint{font-size:11px;color:var(--dim);line-height:1.45;}
+
+  /* ---------- quick tray ---------- */
+  .seg{display:flex;background:#0d1631;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px;margin-bottom:9px;}
+  .seg button{
+    flex:1;border:none;border-radius:9px;padding:9px;font-size:12px;font-weight:800;cursor:pointer;
+    background:transparent;color:var(--dim);font-family:inherit;
+  }
+  .seg button.on-foe{background:rgba(255,106,77,.18);color:#ffb4a0;border:1px solid rgba(255,106,77,.5);}
+  .seg button.on-me{background:rgba(77,163,255,.16);color:#a8d1ff;border:1px solid rgba(77,163,255,.5);}
+  .traywrap{display:flex;gap:8px;}
+  .tray{
+    display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none;flex:1;
+  }
+  .tray::-webkit-scrollbar{display:none;}
+  .tile{width:60px;flex:none;text-align:center;cursor:pointer;background:none;border:none;color:inherit;padding:0;}
+  .tile .circ{
+    width:54px;height:54px;border-radius:16px;margin:0 auto;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:15px;color:#fff;border:2px solid transparent;
+    box-shadow:0 3px 10px rgba(0,0,0,.35);position:relative;
+  }
+  .tile .hot{
+    position:absolute;top:-5px;right:-6px;background:var(--red);color:#fff;font-size:8px;font-weight:900;
+    border-radius:8px;padding:1px 4px;letter-spacing:.5px;
+  }
+  .tile:active .circ{transform:scale(.9);}
+  .tile .nm{font-size:9px;color:var(--dim);margin-top:4px;line-height:1.15;height:20px;overflow:hidden;}
+  .flash{
+    min-height:16px;font-size:10.5px;color:#ffb4a0;margin-top:2px;text-align:center;
+    opacity:0;transition:opacity .2s;
+  }
+  .flash.show{opacity:1;}
+
+  /* ---------- quick tab ---------- */
+  .qchips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px;min-height:26px;}
+  .qchip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,106,77,.1);border:1px solid rgba(255,106,77,.4);border-radius:18px;padding:2px 10px 2px 2px;font-size:11px;cursor:pointer;color:var(--txt);font-weight:600;}
+  .qchip .circ{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;}
+  .qchip .x{color:#ff9a86;font-weight:900;margin-left:2px;font-size:13px;}
+  .qempty{font-size:10.5px;color:var(--dim);align-self:center;}
+  .playhint{background:var(--card);border:1px dashed #3a4a80;border-radius:14px;padding:18px 14px;text-align:center;font-size:12px;color:var(--dim);line-height:1.55;}
+  .playhint b{color:var(--gold);}
+  .playcard{
+    background:linear-gradient(135deg,#26230e,#131c3a);
+    border:1.5px solid rgba(245,192,74,.65);border-radius:18px;padding:14px;margin-top:2px;cursor:pointer;
+    box-shadow:0 8px 28px rgba(245,166,58,.16);
+  }
+  .playcard:active{transform:scale(.99);}
+  .plabel{font-size:11px;letter-spacing:1.8px;font-weight:900;color:var(--gold);margin-bottom:10px;}
+  .pmain{display:flex;gap:13px;align-items:center;}
+  .pinfo{flex:1;min-width:0;}
+  .pname{font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .psub{font-size:11px;color:var(--dim);margin-top:3px;}
+  .qrole{color:#7cecb5;font-weight:700;margin-left:6px;}
+  .qalsolab{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);margin:12px 2px 7px;}
+  .qbanline{margin-top:11px;font-size:11px;color:var(--dim);display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .qnote{margin-top:9px;font-size:11px;color:#c6cfe9;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:11px;padding:9px 11px;line-height:1.45;}
+  .rolechips{display:flex;gap:7px;flex-wrap:wrap;}
+  .rchip{padding:9px 13px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--dim);font-size:12px;cursor:pointer;font-weight:700;font-family:inherit;}
+  .rchip.on{background:linear-gradient(135deg,#f5c04a,#d98a1f);color:#1a1300;border-color:transparent;}
+
+  .btnrow{display:flex;gap:9px;margin:2px 0 12px;}
+  button{font-family:inherit;}
+  .btn{
+    flex:1;border:none;border-radius:13px;padding:13px;font-size:13.5px;font-weight:800;cursor:pointer;
+    color:#1a1300;background:linear-gradient(135deg,#ffd166,#f0a63a);
+    box-shadow:0 6px 18px rgba(245,166,58,.25);
+  }
+  .btn:active{transform:scale(.98);}
+  .btn.ghost{
+    flex:0 0 auto;padding:13px 14px;background:transparent;color:var(--dim);
+    border:1px solid var(--line);box-shadow:none;font-weight:700;font-size:12.5px;
+  }
+
+  /* ---------- results ---------- */
+  .sect-title{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim);margin:16px 2px 8px;}
+  .meters{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .meter{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 11px;}
+  .meter .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:6px;}
+  .meter .lab b{color:var(--txt);}
+  .bar{height:6px;border-radius:4px;background:#22305c;overflow:hidden;}
+  .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#6bb6ff,#8b7bff);}
+  .chipline{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+  .chip{font-size:11px;padding:5px 9px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--txt);}
+  .chip.warn{border-color:rgba(255,120,90,.5);background:rgba(255,120,90,.1);color:#ffb4a0;}
+  .chip.gold{border-color:rgba(245,192,74,.45);background:rgba(245,192,74,.1);color:var(--gold);}
+  .verdict{
+    background:linear-gradient(135deg,rgba(245,192,74,.12),rgba(139,123,255,.12));
+    border:1px solid rgba(245,192,74,.35);border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.5;margin-bottom:4px;
+  }
+  .verdict b{color:var(--gold);}
+  .recgroup{margin-bottom:12px;}
+  .rechead{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin:6px 0 8px;}
+  .rechead .ic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .reccard{
+    display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:11px;margin-bottom:8px;cursor:pointer;
+  }
+  .reccard .info{flex:1;min-width:0;}
+  .reccard .top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .reccard .name{font-weight:700;font-size:14px;}
+  .reasons{display:flex;flex-direction:column;gap:3px;margin-top:5px;}
+  .reason{font-size:11.5px;color:var(--dim);line-height:1.35;}
+  .reason::before{content:"▸ ";color:var(--gold);}
+  .score{margin-left:auto;font-size:10px;color:var(--gold);font-weight:700;border:1px solid rgba(245,192,74,.4);padding:2px 7px;border-radius:12px;white-space:nowrap;}
+  .bancard{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid rgba(255,120,90,.35);border-radius:12px;padding:9px 11px;margin-bottom:7px;}
+  .bancard .why{font-size:11px;color:var(--dim);margin-top:2px;line-height:1.3;}
+  .banicon{width:34px;height:34px;border-radius:10px;background:rgba(255,120,90,.14);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none;}
+  .note{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:7px;font-size:12.5px;line-height:1.45;}
+  .note .ic{flex:none;font-size:15px;}
+  .note p{color:#c6cfe9;}
+
+  /* ---------- heroes tab ---------- */
+  .search{
+    width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;color:var(--txt);font-size:14px;margin-bottom:10px;outline:none;
+  }
+  .search::placeholder{color:#5a6a9e;}
+  .search.sm{padding:9px 12px;font-size:12.5px;margin-bottom:7px;}
+  .filterchips{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px;scrollbar-width:none;}
+  .filterchips::-webkit-scrollbar{display:none;}
+  .fchip{flex:none;padding:7px 13px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--dim);font-size:12px;cursor:pointer;font-weight:600;}
+  .fchip.on{background:linear-gradient(135deg,#8b7bff,#6b4ff0);color:#fff;border-color:transparent;}
+  .hrow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:10px 12px;margin-bottom:8px;cursor:pointer;}
+  .hrow .info{flex:1;min-width:0;}
+  .hrow .name{font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px;}
+  .hrow .sub{font-size:11px;color:var(--dim);margin-top:2px;}
+  .hrow .chev{color:#46568e;font-size:18px;}
+  .ministats{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
+  .ministat{font-size:9px;color:var(--dim);background:rgba(255,255,255,.04);padding:2px 6px;border-radius:6px;border:1px solid var(--line);}
+  .ministat b{color:var(--gold);}
+
+  .avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex:none;letter-spacing:.5px;text-shadow:0 1px 2px rgba(0,0,0,.4);}
+  .av-clash{background:linear-gradient(135deg,#ff9a5c,#d94a1e);}
+  .av-jungle{background:linear-gradient(135deg,#c98bff,#7a2fe0);}
+  .av-mid{background:linear-gradient(135deg,#7cc0ff,#2f5fe0);}
+  .av-farm{background:linear-gradient(135deg,#ffd97a,#d98a1f);}
+  .av-roam{background:linear-gradient(135deg,#7cecb5,#158758);}
+  .av-sq{border-radius:16px !important;}
+
+  .tier{font-size:9px;font-weight:800;padding:2px 6px;border-radius:7px;letter-spacing:.5px;}
+  .tier.S{background:rgba(245,192,74,.18);color:var(--gold);border:1px solid rgba(245,192,74,.5);}
+  .tier.A{background:rgba(139,123,255,.16);color:#b7adff;border:1px solid rgba(139,123,255,.5);}
+  .tier.B{background:rgba(147,160,201,.12);color:var(--dim);border:1px solid var(--line);}
+  .dmgchip{font-size:9px;font-weight:700;padding:2px 6px;border-radius:7px;background:rgba(107,182,255,.12);color:#9ecbff;border:1px solid rgba(107,182,255,.35);}
+
+  /* ---------- tips tab ---------- */
+  .tipcard{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;}
+  .tipcard .n{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#8b7bff,#6b4ff0);display:flex;align-items:center;justify-content:center;font-size:15px;flex:none;}
+  .tipcard h3{font-size:13.5px;margin-bottom:4px;}
+  .tipcard p{font-size:12px;color:var(--dim);line-height:1.5;}
+
+  /* ---------- modals ---------- */
+  .modal{position:fixed;inset:0;background:rgba(4,8,20,.7);backdrop-filter:blur(3px);z-index:50;display:none;}
+  .modal.open{display:block;}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;
+    background:var(--bg2);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;
+    padding:16px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);max-height:84vh;overflow-y:auto;
+    animation:slideup .2s ease;
+  }
+  @keyframes slideup{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+  .grab{width:40px;height:4px;border-radius:3px;background:#3a4a80;margin:0 auto 12px;}
+  .sheet h3{font-size:15px;margin-bottom:10px;}
+  .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:8px;}
+  .pcell{text-align:center;cursor:pointer;border:none;background:none;color:inherit;padding:0;}
+  .pcell .circ{width:55px;height:55px;border-radius:16px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;}
+  .pcell .nm{font-size:9.5px;color:var(--dim);margin-top:4px;line-height:1.15;}
+  .pcell:disabled{opacity:.25;}
+  .pcell .lane{font-size:8.5px;color:#5a6a9e;}
+  .closebtn{width:100%;margin-top:12px;border:1px solid var(--line);background:transparent;color:var(--dim);border-radius:12px;padding:12px;font-size:13px;cursor:pointer;}
+
+  .detail-top{display:flex;gap:14px;align-items:center;margin-bottom:12px;}
+  .detail-top .avatar{width:64px;height:64px;font-size:20px;}
+  .statrow{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+  .statrow .k{width:38px;font-size:10px;color:var(--dim);text-align:right;}
+  .statrow .bar{flex:1;}
+  .statrow b{width:14px;font-size:11px;text-align:right;}
+  .vsblock{margin-top:12px;}
+  .vsblock h4{font-size:12px;color:var(--dim);margin-bottom:7px;letter-spacing:.8px;text-transform:uppercase;}
+  .vschips{display:flex;flex-wrap:wrap;gap:7px;}
+  .vschip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:4px 9px 4px 4px;font-size:11px;cursor:pointer;color:var(--txt);}
+  .vschip .circ{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;}
+  .vschip.good{border-color:rgba(95,227,161,.45);}
+  .vschip.bad{border-color:rgba(255,120,90,.45);}
+
+  /* ---------- bottom nav ---------- */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;max-width:520px;margin:0 auto;
+    background:rgba(13,20,38,.92);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);display:flex;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  nav button{
+    flex:1;background:none;border:none;color:var(--dim);padding:10px 0 12px;font-size:10.5px;
+    display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-weight:600;
+  }
+  nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  nav button.on{color:var(--gold);}
+  .foot{font-size:10px;color:#5a6a9e;text-align:center;padding:14px 18px 4px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="badge">⚔️</div>
+      <div>
+        <h1>Draft<span>Ace</span></h1>
+        <p><span class="live-dot"></span>Live counter-picks · updates as enemies lock in</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ QUICK TAB (home) ============ -->
+    <section id="tab-quick">
+      <div class="card">
+        <h2>⚡ Quick Counter <span class="hint">tap each enemy as they lock in</span></h2>
+        <div class="qchips" id="qChips"></div>
+        <input class="search sm" id="qSearch" placeholder="🔍 Filter heroes…">
+        <div class="traywrap"><div class="tray" id="qTray"></div></div>
+        <div class="flash" id="qFlash"></div>
+      </div>
+
+      <div id="qAnswer"></div>
+
+      <div class="card">
+        <h2>🎯 I mostly play <span class="hint">answers will fit this role</span></h2>
+        <div class="rolechips" id="qRoles"></div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn ghost" id="qUndo">↩ Undo pick</button>
+        <button class="btn ghost" id="qReset">New draft</button>
+      </div>
+    </section>
+
+    <!-- ============ DRAFT TAB ============ -->
+    <section id="tab-draft" hidden>
+
+      <div class="installcard" id="installCard">
+        <button class="x" id="installClose">✕</button>
+        <b>📲 One-tap install — make it a real app:</b><br><span id="installSteps"></span>
+      </div>
+
+      <div class="helpcard" id="helpCard">
+        <button class="x" id="helpClose">✕</button>
+        <b>Draft-speed mode:</b> during BP, leave this open next to you. Each time an enemy locks in,
+        tap their hero in the tray below — counters &amp; bans refresh <b>instantly</b>. Use
+        <kbd>Enemy</kbd>/<kbd>Me</kbd> to switch teams, <kbd>↩ Undo</kbd> for mis-taps.
+      </div>
+
+      <!-- teams -->
+      <div class="card">
+        <div class="teamrow">
+          <div class="teamtag foe">FOE</div>
+          <div class="slots" id="enemySlots"></div>
+        </div>
+        <div class="teamrow">
+          <div class="teamtag me">ME</div>
+          <div class="slots" id="allySlots"></div>
+        </div>
+      </div>
+
+      <!-- live suggestions -->
+      <div class="stickybar">
+        <div class="livep">
+          <div class="livehead">
+            <span class="t">⚡ Live Suggestions</span>
+            <span class="s" id="liveSub">waiting for picks…</span>
+          </div>
+          <div id="livePicks"></div>
+          <div class="livebans" id="liveBans"></div>
+          <div class="livenotes" id="liveNotes"></div>
+        </div>
+      </div>
+
+      <!-- quick tray -->
+      <div class="card">
+        <div class="seg">
+          <button id="segEnemy" class="on-foe">🔴 Enemy picks</button>
+          <button id="segAlly">🔵 My picks</button>
+        </div>
+        <input class="search sm" id="traySearch" placeholder="🔍 Type to filter…">
+        <div class="traywrap"><div class="tray" id="tray"></div></div>
+        <div class="flash" id="flash"></div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn" id="analyzeBtn">📊 Full Draft Report</button>
+        <button class="btn ghost" id="undoBtn">↩ Undo</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
+      </div>
+
+      <div id="results"></div>
+    </section>
+
+    <!-- ============ HEROES TAB ============ -->
+    <section id="tab-heroes" hidden>
+      <input class="search" id="heroSearch" placeholder="🔍 Search heroes...">
+      <div class="filterchips" id="laneChips">
+        <button class="fchip on" data-lane="All">All</button>
+        <button class="fchip" data-lane="Clash">⚔️ Clash</button>
+        <button class="fchip" data-lane="Jungle">🌿 Jungle</button>
+        <button class="fchip" data-lane="Mid">🔮 Mid</button>
+        <button class="fchip" data-lane="Farm">🏹 Farm</button>
+        <button class="fchip" data-lane="Roam">🛡️ Roam</button>
+      </div>
+      <div id="heroGrid"></div>
+    </section>
+
+    <!-- ============ TIPS TAB ============ -->
+    <section id="tab-tips" hidden>
+      <div class="card" style="border-color:rgba(245,192,74,.4);">
+        <h2>🏆 Ranked Tips That Actually Win Games</h2>
+        <p style="font-size:12px;color:var(--dim);line-height:1.5;">A good draft is worth a few hundred gold of advantage — these habits turn it into wins.</p>
+      </div>
+      <div id="tipList"></div>
+      <div class="foot">
+        DraftAce is a fan-made companion app and is not affiliated with or endorsed by TiMi Studio or Tencent.<br>
+        Hero data &amp; tiers are indicative for the global server and shift with balance patches. No app can guarantee wins — draft edge + execution does. GLHF! 💜
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <nav>
+    <button class="on" data-tab="quick">
+      <svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>
+      Quick
+    </button>
+    <button data-tab="draft">
+      <svg viewBox="0 0 24 24"><path d="M4 4l5.5 5.5M20 4l-5.5 5.5M14.5 9.5L20 15l-3 3-5.5-5.5M9.5 9.5L4 15l3 3 5.5-5.5"/></svg>
+      Draft
+    </button>
+    <button data-tab="heroes">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+      Heroes
+    </button>
+    <button data-tab="tips">
+      <svg viewBox="0 0 24 24"><path d="M12 3l2.2 4.9 5.3.5-4 3.6 1.2 5.2L12 14.3 7.3 17.2 8.5 12l-4-3.6 5.3-.5z"/></svg>
+      Tips
+    </button>
+  </nav>
+</div>
+
+<!-- ============ SLOT PICKER MODAL ============ -->
+<div class="modal" id="pickerModal">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="pickerTitle">Pick a hero</h3>
+    <input class="search" id="pickerSearch" placeholder="🔍 Search heroes...">
+    <div class="pgrid" id="pickerGrid"></div>
+    <button class="closebtn" data-close="pickerModal">Cancel</button>
+  </div>
+</div>
+
+<!-- ============ DETAIL MODAL ============ -->
+<div class="modal" id="detailModal">
+  <div class="sheet" id="detailSheet"></div>
+</div>
+
+<script>
+/* ================================================================
+   DATA — global HoK roster (indicative). dmg: P=physical M=magic T=true
+   s = stats 1-5 : mob/bst/sus/cc/tnk/pok
+================================================================ */
+const HEROES = [
+/* ---------- CLASH / FIGHTERS / TANKS ---------- */
+{id:"arthur",name:"Arthur",lane:"Clash",roles:["Fighter","Tank"],dmg:"P",tier:"B",s:{mob:2,bst:2,sus:4,cc:3,tnk:4,pok:1},tags:["frontline","bully","pointcc"],how:"Kite his silence window — he wins long trades with sustain, so chunk him fast or just ignore him in teamfights."},
+{id:"lu-bu",name:"Lü Bu",lane:"Clash",roles:["Fighter"],dmg:"T",tier:"A",s:{mob:2,bst:4,sus:3,cc:2,tnk:3,pok:1},tags:["truedmg","frontline","aoecc","engage"],how:"His true damage only turns on after skill 1 lands — sidestep it and fight before he is empowered."},
+{id:"sun-ce",name:"Sun Ce",lane:"Clash",roles:["Fighter","Tank"],dmg:"P",tier:"A",s:{mob:4,bst:3,sus:3,cc:4,tnk:3,pok:2},tags:["engage","global","aoecc","frontline"],how:"The boat can be body-blocked or sidestepped — save a CC to interrupt his combo right after he lands."},
+{id:"mulan",name:"Mulan",lane:"Clash",roles:["Fighter","Assassin"],dmg:"P",tier:"A",s:{mob:3,bst:4,sus:2,cc:3,tnk:2,pok:1},tags:["bully","pointcc","untargetable"],how:"Punish her before level 4 and never chase her into bushes — her charged heavy-sword combo bursts hard."},
+{id:"guan-yu",name:"Guan Yu",lane:"Clash",roles:["Fighter"],dmg:"P",tier:"A",s:{mob:5,bst:3,sus:2,cc:4,tnk:2,pok:1},tags:["knockback","engage","disengage","peel"],how:"Slows and knock-ups break his charge — one CC before his horse gets going makes him much weaker."},
+{id:"kaizer",name:"Kaizer",lane:"Clash",roles:["Fighter"],dmg:"P",tier:"B",s:{mob:2,bst:4,sus:4,cc:2,tnk:3,pok:1},tags:["bully","frontline"],how:"Don't 1v1 him during his ultimate — kite through the empowered form and re-engage when it expires."},
+{id:"mayene",name:"Mayene",lane:"Clash",roles:["Fighter","Assassin"],dmg:"P",tier:"A",s:{mob:3,bst:4,sus:1,cc:2,tnk:1,pok:1},tags:["bully","pointcc","dive"],how:"Her combos need close range — poke her down first and punish the long cooldown window after her engage."},
+{id:"yang-jian",name:"Yang Jian",lane:"Clash",roles:["Fighter"],dmg:"P",tier:"B",s:{mob:3,bst:3,sus:4,cc:2,tnk:3,pok:1},tags:["bully","frontline"],how:"He heals heavily off his ultimate — buy anti-heal and dodge the beam to gut his recovery."},
+{id:"nezha",name:"Nezha",lane:"Clash",roles:["Fighter"],dmg:"P",tier:"A",s:{mob:4,bst:3,sus:2,cc:3,tnk:3,pok:1},tags:["global","antiheal","engage","dive"],how:"His ultimate dives anyone globally — hug your backline when he is missing and CC him the moment he lands."},
+{id:"wuyan",name:"Wuyan",lane:"Clash",roles:["Tank","Fighter"],dmg:"P",tier:"B",s:{mob:2,bst:3,sus:2,cc:3,tnk:4,pok:1},tags:["aoecc","frontline","bully"],how:"Her petrify builds off repeated hits — don't trade autos with her; burst her between passive procs."},
+{id:"dun",name:"Dun",lane:"Clash",roles:["Tank","Fighter"],dmg:"P",tier:"A",s:{mob:2,bst:2,sus:4,cc:3,tnk:5,pok:1},tags:["frontline","peel","shield","pointcc"],how:"He shields up constantly — heal-cut helps, but usually you should kill his carries instead of feeding him."},
+{id:"bai-qi",name:"Bai Qi",lane:"Clash",roles:["Tank"],dmg:"P",tier:"A",s:{mob:2,bst:2,sus:4,cc:4,tnk:4,pok:1},tags:["aoecc","frontline","peel"],how:"Never cluster — his ultimate taunts everyone nearby. Spread out and save a dash for it."},
+{id:"liu-bang",name:"Liu Bang",lane:"Clash",roles:["Tank","Support"],dmg:"P",tier:"B",s:{mob:2,bst:2,sus:3,cc:2,tnk:4,pok:1},tags:["global","peel","shield","frontline"],how:"He shields an ally from anywhere — force the ultimate early or bring enough burst to kill through it."},
+{id:"ata",name:"Ata",lane:"Clash",roles:["Tank"],dmg:"P",tier:"B",s:{mob:2,bst:2,sus:3,cc:4,tnk:5,pok:1},tags:["frontline","aoecc","bully"],how:"His pull grabs the first hero hit — stand behind minions and punish his short range with poke."},
+{id:"lian-po",name:"Lian Po",lane:"Clash",roles:["Tank"],dmg:"P",tier:"B",s:{mob:2,bst:2,sus:2,cc:4,tnk:5,pok:1},tags:["frontline","aoecc","engage"],how:"Chain-CC tank with low damage — walk out during his combo, then fight while everything is on cooldown."},
+{id:"dian-wei",name:"Dian Wei",lane:"Clash",roles:["Fighter"],dmg:"P",tier:"B",s:{mob:2,bst:4,sus:4,cc:2,tnk:4,pok:1},tags:["frontline","bully"],how:"Terrifying melee brawler — never fight him at arm's length; slows and dashes ruin him completely."},
+
+/* ---------- JUNGLE / ASSASSINS ---------- */
+{id:"han-xin",name:"Han Xin",lane:"Jungle",roles:["Assassin"],dmg:"P",tier:"A",s:{mob:5,bst:4,sus:1,cc:3,tnk:1,pok:1},tags:["dive","splitpush","pointcc"],how:"Insanely mobile but squishy — hold one hard CC for his jump-in and he dies instantly. Watch your towers: he backdoors."},
+{id:"li-bai",name:"Li Bai",lane:"Jungle",roles:["Assassin"],dmg:"P",tier:"A",s:{mob:5,bst:3,sus:1,cc:1,tnk:1,pok:2},tags:["dive","untargetable"],how:"Untargetable mid-dash — don't waste skills on the animation. CC him when he lands or returns to his mark."},
+{id:"jing",name:"Jing",lane:"Jungle",roles:["Assassin"],dmg:"P",tier:"S",s:{mob:5,bst:5,sus:1,cc:1,tnk:1,pok:1},tags:["dive"],how:"Bursts before you can react — early armor, never walk alone when he is missing, and hold a stun for his entry."},
+{id:"wukong",name:"Wukong",lane:"Jungle",roles:["Assassin","Fighter"],dmg:"P",tier:"A",s:{mob:4,bst:5,sus:2,cc:2,tnk:2,pok:1},tags:["dive","bully"],how:"His clone blocks skills — don't blow ground-targeted CC on it; lock the real monkey after his dash."},
+{id:"nakoruru",name:"Nakoruru",lane:"Jungle",roles:["Assassin"],dmg:"P",tier:"A",s:{mob:4,bst:5,sus:1,cc:1,tnk:1,pok:2},tags:["dive"],how:"Pure burst with no sustain — one stun mid-dive and she folds. Don't get caught alone."},
+{id:"luna",name:"Luna",lane:"Jungle",roles:["Mage","Assassin"],dmg:"M",tier:"A",s:{mob:5,bst:3,sus:2,cc:1,tnk:2,pok:2},tags:["dive","bully"],how:"She resets dashes off marked targets — spread out and avoid her mark so she can't chain resets across your team."},
+{id:"lanling",name:"Prince of Lanling",lane:"Jungle",roles:["Assassin"],dmg:"P",tier:"A",s:{mob:4,bst:5,sus:1,cc:2,tnk:1,pok:1},tags:["dive","stealth"],how:"Invisible assassin — group with allies, let a tank face-check bushes, and keep a CC ready under your feet."},
+{id:"pei",name:"Pei",lane:"Jungle",roles:["Assassin","Fighter"],dmg:"P",tier:"B",s:{mob:4,bst:4,sus:2,cc:2,tnk:2,pok:1},tags:["dive","bully"],how:"Strong early, falls off late — respect his level-2 invades and out-scale him with your backline."},
+{id:"sima-yi",name:"Sima Yi",lane:"Jungle",roles:["Mage","Assassin"],dmg:"M",tier:"A",s:{mob:4,bst:4,sus:2,cc:2,tnk:1,pok:2},tags:["dive","poke"],how:"He punishes ability spam with silence — hold key skills until he commits, then focus him down."},
+{id:"lam",name:"Lam",lane:"Jungle",roles:["Assassin","Fighter"],dmg:"P",tier:"S",s:{mob:5,bst:4,sus:3,cc:1,tnk:2,pok:1},tags:["dive","bully"],how:"He wants to knife through your backline — track him on the map, clump less, and CC his landing spot."},
+{id:"augran",name:"Augran",lane:"Jungle",roles:["Fighter","Assassin"],dmg:"P",tier:"S",s:{mob:5,bst:4,sus:2,cc:1,tnk:2,pok:2},tags:["dive","bully"],how:"Slippery duelist — hold one point-click stun for his entry and burst before he can reset the fight."},
+{id:"zhao-yun",name:"Zhao Yun",lane:"Jungle",roles:["Fighter","Assassin"],dmg:"P",tier:"A",s:{mob:4,bst:3,sus:4,cc:2,tnk:3,pok:1},tags:["dive","frontline","bully"],how:"Low-cooldown diver with sustain — anti-heal helps, but kiting and good peel ruin his engages."},
+
+/* ---------- MID / MAGES ---------- */
+{id:"daji",name:"Daji",lane:"Mid",roles:["Mage"],dmg:"M",tier:"B",s:{mob:1,bst:5,sus:1,cc:3,tnk:1,pok:2},tags:["pointcc"],how:"Her charm leads into full burst — dodge it (or let a tank eat it) and build early magic defense."},
+{id:"angela",name:"Angela",lane:"Mid",roles:["Mage"],dmg:"M",tier:"A",s:{mob:1,bst:5,sus:1,cc:3,tnk:1,pok:3},tags:["aoecc","wombo","zone","shield"],how:"Dodge her stun and the whole combo whiffs — then dive her while every skill is on cooldown."},
+{id:"diaochan",name:"Diaochan",lane:"Mid",roles:["Mage","Assassin"],dmg:"M",tier:"S",s:{mob:4,bst:3,sus:3,cc:2,tnk:1,pok:2},tags:["bully"],how:"She dances inside her ultimate ring — refuse to fight her there; drag her out or burst with point-click CC."},
+{id:"zhuge-liang",name:"Zhuge Liang",lane:"Mid",roles:["Mage"],dmg:"M",tier:"A",s:{mob:3,bst:5,sus:1,cc:1,tnk:1,pok:3},tags:["poke"],how:"His ultimate executes low-HP allies — shield, heal, or body-block for tagged teammates."},
+{id:"frost",name:"Princess Frost",lane:"Mid",roles:["Mage"],dmg:"M",tier:"A",s:{mob:1,bst:3,sus:1,cc:5,tnk:1,pok:4},tags:["aoecc","zone","waveclear","wombo"],how:"Her ultimate zone wins teamfights — spread out and walk out fast, or interrupt her before it starts."},
+{id:"xiao-qiao",name:"Xiao Qiao",lane:"Mid",roles:["Mage"],dmg:"M",tier:"A",s:{mob:1,bst:4,sus:1,cc:3,tnk:1,pok:4},tags:["poke","aoecc","waveclear"],how:"Her fan knock-up needs prediction — erratic movement ruins her aim, and diving her is very rewarding."},
+{id:"zhen-ji",name:"Zhen Ji",lane:"Mid",roles:["Mage"],dmg:"M",tier:"B",s:{mob:1,bst:3,sus:1,cc:5,tnk:1,pok:3},tags:["aoecc","zone","wombo"],how:"Chain-freezes clumped teams — spread your formation; cleanse effects (Zhuangzi) hard-counter her."},
+{id:"gan-mo",name:"Gan & Mo",lane:"Mid",roles:["Mage"],dmg:"M",tier:"A",s:{mob:1,bst:5,sus:1,cc:1,tnk:1,pok:5},tags:["poke","zone"],how:"Dodge sideways, not backward — the swords curve. Any assassin with a dash deletes them."},
+{id:"milady",name:"Milady",lane:"Mid",roles:["Mage"],dmg:"M",tier:"B",s:{mob:1,bst:3,sus:2,cc:2,tnk:1,pok:3},tags:["summon","zone","waveclear"],how:"Kill her summoned bots quickly to cut her damage — she is helpless under direct pressure."},
+{id:"mai",name:"Mai Shiranui",lane:"Mid",roles:["Mage","Assassin"],dmg:"M",tier:"A",s:{mob:4,bst:5,sus:1,cc:3,tnk:1,pok:2},tags:["dive","knockback"],how:"Mobile burst mage — magic defense early, and hold a stun for the moment she dashes in."},
+{id:"shangguan",name:"Shangguan",lane:"Mid",roles:["Mage","Assassin"],dmg:"M",tier:"S",s:{mob:4,bst:5,sus:1,cc:1,tnk:1,pok:2},tags:["dive","untargetable"],how:"Her ultimate is untargetable while ink-dashing — wait for the landing, then collapse. Don't feed her lane targets."},
+{id:"yuhuan",name:"Yuhuan",lane:"Mid",roles:["Mage","Support"],dmg:"M",tier:"A",s:{mob:2,bst:2,sus:4,cc:3,tnk:1,pok:3},tags:["heal","untargetable","buff"],how:"She swaps between healing and damage — anti-heal cuts her value; catch her before teamfight ultis turn the tide."},
+{id:"zhou-yu",name:"Zhou Yu",lane:"Mid",roles:["Mage"],dmg:"M",tier:"B",s:{mob:1,bst:2,sus:1,cc:3,tnk:1,pok:4},tags:["zone","waveclear","aoecc"],how:"His fire controls ground — never fight on burning zones; flank instead of walking in the front door."},
+{id:"yixing",name:"Yixing",lane:"Mid",roles:["Mage"],dmg:"M",tier:"B",s:{mob:1,bst:3,sus:1,cc:4,tnk:1,pok:3},tags:["zone","aoecc"],how:"His ultimate arena traps mobile heroes — fight outside his stones and poke him during the setup."},
+{id:"zhang-liang",name:"Zhang Liang",lane:"Mid",roles:["Mage","Support"],dmg:"M",tier:"S",s:{mob:2,bst:3,sus:1,cc:5,tnk:1,pok:2},tags:["suppress","zone","pointcc"],how:"His suppression can't be cleansed — don't make your only win condition a diver, and bait the ult with a tank."},
+
+/* ---------- FARM / MARKSMEN ---------- */
+{id:"marco",name:"Marco Polo",lane:"Farm",roles:["Marksman"],dmg:"T",tier:"S",s:{mob:4,bst:3,sus:1,cc:1,tnk:1,pok:3},tags:["truedmg","poke","hypercarry"],how:"Melts tanks at full stacks with true damage bullets — win lane early and interrupt his ultimate with CC."},
+{id:"hou-yi",name:"Hou Yi",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"A",s:{mob:1,bst:3,sus:1,cc:3,tnk:1,pok:4},tags:["hypercarry","global","pointcc"],how:"Immobile hypercarry — dive him. His cross-map arrow stuns engages, so spread before walking into vision."},
+{id:"lady-sun",name:"Lady Sun",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"S",s:{mob:4,bst:5,sus:1,cc:1,tnk:1,pok:3},tags:["hypercarry","poke"],how:"Massive burst with a rolling reposition — bait the roll first, then all-in. Armor blunts her hard."},
+{id:"luban7",name:"Luban No.7",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"B",s:{mob:1,bst:3,sus:1,cc:2,tnk:1,pok:3},tags:["percenthp","hypercarry"],how:"%HP passive shreds tanks — but any assassin deletes him in lane. Never let him free-hit."},
+{id:"arli",name:"Arli",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"S",s:{mob:5,bst:4,sus:1,cc:2,tnk:1,pok:2},tags:["hypercarry"],how:"The umbrella makes her ultra-slippery — use point-click CC and burst the second her umbrella is away."},
+{id:"di-renjie",name:"Di Renjie",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"A",s:{mob:2,bst:3,sus:1,cc:2,tnk:1,pok:3},tags:["cleanse","hypercarry"],how:"His skill 2 cleanses CC — bait it out first, then stun. Chain your CC, don't stack it."},
+{id:"yu-ji",name:"Consort Yu",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"A",s:{mob:2,bst:3,sus:1,cc:1,tnk:2,pok:3},tags:["antiphys","poke"],how:"Brief physical immunity frustrates assassins — pressure her with magic damage or wait out the buff."},
+{id:"shouyue",name:"Shouyue",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"B",s:{mob:1,bst:4,sus:1,cc:1,tnk:1,pok:5},tags:["poke"],how:"He wins at very long range — close distance fast, hug minion waves, and punish every missed shot."},
+{id:"meng-ya",name:"Meng Ya",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"A",s:{mob:2,bst:3,sus:1,cc:1,tnk:1,pok:4},tags:["waveclear","poke","zone"],how:"His barrage zones objectives — flank his firing angle or disengage when the missiles start."},
+{id:"huang-zhong",name:"Huang Zhong",lane:"Farm",roles:["Marksman"],dmg:"P",tier:"B",s:{mob:1,bst:4,sus:1,cc:1,tnk:1,pok:4},tags:["zone","hypercarry"],how:"A rooted turret during ultimate — hook, dive, or out-range him; never siege into his setup slowly."},
+{id:"fang",name:"Fang",lane:"Farm",roles:["Marksman","Assassin"],dmg:"P",tier:"B",s:{mob:3,bst:4,sus:1,cc:2,tnk:1,pok:3},tags:["zone","dive"],how:"Strong skirmisher early — respect his burst combo, and peel his boomerang zone off your carry."},
+
+/* ---------- ROAM / SUPPORTS ---------- */
+{id:"zhuangzi",name:"Zhuangzi",lane:"Roam",roles:["Support","Tank"],dmg:"M",tier:"A",s:{mob:3,bst:1,sus:3,cc:2,tnk:4,pok:2},tags:["cleanse","frontline","peel","disengage"],how:"Low kill pressure — ignore him and kill his carries. Save your big CC for right after his team cleanse."},
+{id:"zhang-fei",name:"Zhang Fei",lane:"Roam",roles:["Tank","Support"],dmg:"P",tier:"A",s:{mob:2,bst:2,sus:2,cc:4,tnk:5,pok:1},tags:["frontline","aoecc","shield","peel","engage","wombo"],how:"Huge shield and a team-wide knock-up ult — poke him pre-ult and spread to blunt the ult value."},
+{id:"donghuang",name:"Donghuang Taiyi",lane:"Roam",roles:["Tank","Support"],dmg:"M",tier:"S",s:{mob:2,bst:3,sus:3,cc:5,tnk:3,pok:2},tags:["suppress","peel","frontline"],how:"Suppression ult trades lockdowns 1-for-1 — never let him swap your carry; kill his orbs' sustain with anti-heal."},
+{id:"ming",name:"Ming",lane:"Roam",roles:["Support"],dmg:"M",tier:"A",s:{mob:2,bst:1,sus:3,cc:1,tnk:1,pok:2},tags:["buff","heal"],how:"Buffs one tethered ally — focus the tether target or Ming first; don't let the duo farm in peace."},
+{id:"guiguzi",name:"Guiguzi",lane:"Roam",roles:["Support"],dmg:"M",tier:"A",s:{mob:4,bst:1,sus:2,cc:3,tnk:2,pok:1},tags:["stealth","engage","pull","buff"],how:"Group invisibility into a mass pull — when enemies vanish, disperse instantly so the pull catches one, not five."},
+{id:"sun-bin",name:"Sun Bin",lane:"Roam",roles:["Support"],dmg:"M",tier:"A",s:{mob:3,bst:2,sus:2,cc:3,tnk:1,pok:3},tags:["haste","poke","aoecc","disengage"],how:"Speed-boosts allies and his ult zone silences — walk out of the circle; hard engage beats his kiting game."},
+{id:"yao",name:"Yao",lane:"Roam",roles:["Support"],dmg:"M",tier:"A",s:{mob:3,bst:1,sus:3,cc:2,tnk:1,pok:2},tags:["shield","buff","peel","untargetable"],how:"She rides an ally and shields them — break the shield to force her off, then collect two kills."},
+{id:"cai-wenji",name:"Cai Wenji",lane:"Roam",roles:["Support"],dmg:"M",tier:"B",s:{mob:1,bst:1,sus:5,cc:3,tnk:1,pok:2},tags:["heal","pointcc"],how:"Nonstop healing — buy anti-heal immediately and burst targets between her bouncing stuns."},
+{id:"liu-shan",name:"Liu Shan",lane:"Roam",roles:["Support","Tank"],dmg:"P",tier:"B",s:{mob:3,bst:2,sus:2,cc:4,tnk:3,pok:1},tags:["pointcc","frontline","peel"],how:"Knock-up mech kid — poke him from range; his CC only works at hugging distance."},
+{id:"ziya",name:"Ziya",lane:"Roam",roles:["Support","Mage"],dmg:"M",tier:"B",s:{mob:1,bst:2,sus:1,cc:3,tnk:1,pok:4},tags:["poke","zone","bully"],how:"Slow-heavy long-range poker — dive him at any point; he has almost no escape."},
+{id:"da-qiao",name:"Da Qiao",lane:"Roam",roles:["Support"],dmg:"M",tier:"S",s:{mob:3,bst:2,sus:2,cc:3,tnk:1,pok:3},tags:["global","peel","pointcc"],how:"Portals rescue wounded allies — burst fast before the recall completes and track her teleports on the map."},
+{id:"zhong-kui",name:"Zhong Kui",lane:"Roam",roles:["Support","Mage"],dmg:"M",tier:"B",s:{mob:1,bst:3,sus:2,cc:2,tnk:2,pok:2},tags:["pull","pointcc","zone"],how:"Everything rides on the hook — sidestep sideways, hide behind minions, and punish when it's down."}
+];
+
+/* Curated counter edges: key hero counters listed heroes */
+const EDGES = {
+  "zhang-liang":["han-xin","jing","li-bai","shangguan","mai","diaochan","marco","arli","augran","lanling","lam"],
+  "donghuang":["jing","li-bai","shangguan","mai","pei","augran","nakoruru","lam"],
+  "zhuangzi":["frost","zhen-ji","angela","zhang-fei","bai-qi","lian-po","wuyan","yixing","sun-bin"],
+  "lu-bu":["lian-po","ata","zhang-fei","donghuang","bai-qi","dun"],
+  "marco":["lian-po","ata","bai-qi","zhang-fei","dun"],
+  "luban7":["zhang-fei","lian-po","ata","donghuang"],
+  "yu-ji":["han-xin","jing","wukong","nakoruru","zhao-yun"],
+  "han-xin":["gan-mo","shouyue","hou-yi","milady","ziya","luban7"],
+  "jing":["gan-mo","milady","angela","hou-yi","xiao-qiao"],
+  "li-bai":["shouyue","gan-mo","xiao-qiao","zhen-ji"],
+  "wukong":["xiao-qiao","milady","hou-yi","luban7"],
+  "nakoruru":["angela","xiao-qiao","ziya","zhou-yu"],
+  "sun-ce":["gan-mo","shouyue","milady","luban7","huang-zhong"],
+  "lanling":["hou-yi","luban7","gan-mo","meng-ya","ziya"],
+  "nezha":["cai-wenji","yuhuan","ming","yao"],
+  "zhen-ji":["arthur","dian-wei","kaizer","zhao-yun","wuyan","yang-jian"],
+  "frost":["huang-zhong","luban7","hou-yi"],
+  "guiguzi":["milady","gan-mo","zhou-yu"]
+};
+
+/* Most common ranked picks — pinned first in the quick tray for 1-tap entry */
+const HOT = [
+  "jing","lam","augran","wukong","han-xin","marco","lady-sun","arli","hou-yi","di-renjie",
+  "sun-ce","mulan","dun","lu-bu","guan-yu","nezha","diaochan","mai","shangguan","angela",
+  "zhang-liang","frost","gan-mo","zhuge-liang","daji","donghuang","zhang-fei","zhuangzi","da-qiao","cai-wenji","yao","ming"
+];
+
+const LANES = [
+  {id:"Jungle",icon:"🌿",color:"var(--jungle)",bg:"rgba(192,123,255,.14)",label:"Jungle"},
+  {id:"Mid",icon:"🔮",color:"var(--mid)",bg:"rgba(107,182,255,.12)",label:"Mid Lane"},
+  {id:"Clash",icon:"⚔️",color:"var(--clash)",bg:"rgba(255,138,92,.12)",label:"Clash Lane"},
+  {id:"Farm",icon:"🏹",color:"var(--farm)",bg:"rgba(255,209,102,.12)",label:"Farm Lane"},
+  {id:"Roam",icon:"🛡️",color:"var(--roam)",bg:"rgba(95,227,161,.12)",label:"Roam"}
+];
+
+const TAGNAME = {dive:"Dive",engage:"Engage",disengage:"Disengage",peel:"Peel",suppress:"Suppression",pointcc:"Point-Click CC",aoecc:"AoE CC",cleanse:"Cleanse",truedmg:"True DMG",percenthp:"%HP DMG",antiheal:"Anti-Heal",poke:"Poke",heal:"Healing",shield:"Shield",haste:"Haste",stealth:"Stealth",global:"Global Ult",splitpush:"Split Push",summon:"Summons",untargetable:"Untargetable",frontline:"Frontline",hypercarry:"Hypercarry",antiphys:"Anti-Physical",knockback:"Knockback",pull:"Pull",buff:"Buff",zone:"Zone Control",wombo:"Wombo Combo",bully:"Lane Bully",waveclear:"Wave Clear"};
+
+const TIERBASE = {S:12,A:9,B:6};
+const byId = {}; HEROES.forEach(h=>byId[h.id]=h);
+const EDGED_BY = {};
+Object.keys(EDGES).forEach(a=>EDGES[a].forEach(d=>{(EDGED_BY[d]=EDGED_BY[d]||[]).push(a);}));
+
+const ROLES=["Any","Clash","Jungle","Mid","Farm","Roam"];
+const state = {
+  enemy:[null,null,null,null,null],
+  ally:[null,null,null,null,null],
+  mode:"enemy", helpOff:false, quickRole:"Any",
+  pickerTeam:null, pickerSlot:null, undoStack:[]
+};
+
+/* ---------------- helpers ---------------- */
+const $ = s=>document.querySelector(s);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function initials(name){const w=name.replace(/[^a-zA-Z0-9 .]/g,"").split(" ").filter(Boolean);if(w.length>=2)return (w[0][0]+w[1][0]).toUpperCase();return name.slice(0,2).toUpperCase();}
+function avClass(h){return "av-"+h.lane.toLowerCase();}
+function avatarHTML(h,size,sq){return `<div class="avatar ${avClass(h)}${sq?" av-sq":""}" ${size?`style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.34)}px"`:''}>${esc(initials(h.name))}</div>`;}
+function has(h,t){return h.tags.includes(t);}
+function laneInfo(id){return LANES.find(l=>l.id===id);}
+function buzz(){try{if(navigator.vibrate)navigator.vibrate(12);}catch(e){}}
+function save(){try{localStorage.setItem("hok_draft_v2",JSON.stringify({enemy:state.enemy,ally:state.ally,mode:state.mode,helpOff:state.helpOff,role:state.quickRole}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem("hok_draft_v2"));if(d){
+  if(Array.isArray(d.enemy))d.enemy.forEach((v,i)=>{if(byId[v])state.enemy[i]=v;});
+  if(Array.isArray(d.ally))d.ally.forEach((v,i)=>{if(byId[v])state.ally[i]=v;});
+  if(d.mode==="ally"||d.mode==="enemy")state.mode=d.mode;
+  state.helpOff=!!d.helpOff;
+  if(d.role&&ROLES.includes(d.role))state.quickRole=d.role;
+}}catch(e){}}
+
+/* keep screen awake during draft (best-effort) */
+let _wl=null;
+async function keepAwake(){try{if("wakeLock" in navigator && !_wl)_wl=await navigator.wakeLock.request("screen");}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){_wl=null;keepAwake();}});
+
+/* ---------------- flash message ---------------- */
+let flashT=null;
+function flash(msg){
+  clearTimeout(flashT);
+  ["#flash","#qFlash"].forEach(sel=>{const f=$(sel);if(f){f.textContent=msg;f.classList.add("show");}});
+  flashT=setTimeout(()=>["#flash","#qFlash"].forEach(sel=>{const f=$(sel);if(f)f.classList.remove("show");}),1800);
+}
+
+/* =============== ANALYSIS ENGINE =============== */
+function computeAnalysis(){
+  const E=state.enemy.filter(Boolean).map(id=>byId[id]);
+  const A=state.ally.filter(Boolean).map(id=>byId[id]);
+  const n=E.length||1;
+  const avg=k=>E.reduce((a,h)=>a+h.s[k],0)/n;
+  const mob=avg("mob"),bst=avg("bst"),sus=avg("sus"),cc=avg("cc"),tnk=avg("tnk"),pok=avg("pok");
+  const cnt=fn=>E.filter(fn).length;
+  const healN=cnt(h=>has(h,"heal")),divN=cnt(h=>has(h,"dive")),
+        aocN=cnt(h=>has(h,"aoecc")||has(h,"wombo")||has(h,"suppress")),
+        frN=cnt(h=>h.s.tnk>=4),steN=cnt(h=>has(h,"stealth")),glbN=cnt(h=>has(h,"global")),
+        pkN=cnt(h=>has(h,"poke")),womN=cnt(h=>has(h,"wombo")),supNE=cnt(h=>has(h,"suppress"));
+  const physN=E.filter(h=>h.dmg==="P").length, magN=E.filter(h=>h.dmg==="M").length;
+  const physShare=Math.round(physN/n*100), magShare=Math.round(magN/n*100);
+
+  /* needs */
+  const needs=[]; const ADD=(w,reason,match)=>needs.push({w,reason,match});
+  if(E.length){
+    if(healN>=2||sus>=3.6)ADD(5,"cuts their heavy sustain & healing",h=>has(h,"antiheal")||h.s.bst>=5);
+    if(divN>=2||mob>=3.7)ADD(5,"point-click lockdown stops their divers",h=>has(h,"suppress")||has(h,"pointcc")||has(h,"zone")||has(h,"peel"));
+    if(tnk>=3.6||frN>=3)ADD(5,"true / %HP damage melts their frontline",h=>has(h,"truedmg")||has(h,"percenthp"));
+    if(pok>=3.6||pkN>=3)ADD(4,"dives onto their poke backline",h=>has(h,"dive")||has(h,"global"));
+    if(cc>=3.6||aocN>=2)ADD(4,"cleanse/tenacity answers their CC chain",h=>has(h,"cleanse"));
+    if(cc>=3.6||aocN>=2)ADD(2,"tanky body absorbs their key CC",h=>h.s.tnk>=4);
+    if(physShare>=60)ADD(3,"thrives vs physical-heavy comps",h=>has(h,"antiphys")||h.s.tnk>=4);
+    if(magShare>=62)ADD(3,"pressures their magic-damage core",h=>has(h,"dive"));
+    if(E.length>=3&&tnk<=2.4&&frN===0)ADD(3,"hard engage punishes their glass-cannon comp",h=>has(h,"engage")||has(h,"wombo"));
+    if(steN>=1)ADD(3,"peel & grouping shuts down invisibility",h=>has(h,"peel"));
+    if(glbN>=2)ADD(2,"answers their global pressure with map play of your own",h=>has(h,"global"));
+    if(supNE>=1)ADD(2,"wins without relying on one fragile diver (their suppression is online)",h=>h.s.tnk>=3||has(h,"poke"));
+  }
+
+  const allyPhyN=A.filter(h=>h.dmg==="P").length, allyMagN=A.filter(h=>h.dmg==="M").length;
+  const covered=new Set(A.map(h=>h.lane));
+
+  function scoreHero(h){
+    if(state.enemy.includes(h.id)||state.ally.includes(h.id))return null;
+    let s=TIERBASE[h.tier];const why=[];
+    needs.slice().sort((a,b)=>b.w-a.w).forEach(nd=>{if(nd.match(h)){s+=nd.w;if(why.length<3)why.push(nd.reason);}});
+    const hits=E.filter(e=>(EDGES[h.id]||[]).includes(e.id));
+    if(hits.length){s+=hits.length*3;why.unshift("directly counters "+hits.map(x=>x.name).slice(0,2).join(" + "));}
+    const missing=LANES.some(l=>!covered.has(l.id));
+    if(covered.has(h.lane)&&missing)s-=5;
+    if(!covered.has(h.lane)&&A.length)s+=6;
+    if(A.length>=2){
+      if(allyPhyN>=2&&h.dmg==="M"){s+=2;why.push("adds magic damage so they can't itemize one defense");}
+      if(allyMagN>=2&&h.dmg!=="M"){s+=2;why.push("adds physical damage so they can't itemize one defense");}
+    }
+    if(!E.length&&why.length===0)why.push(covered.size<5&&!covered.has(h.lane)?("safe blind pick for your open "+h.lane+" slot"):"strong meta comfort pick");
+    return {h,s,why:why.slice(0,3)};
+  }
+  const scored=HEROES.map(scoreHero).filter(Boolean).sort((a,b)=>b.s-a.s);
+
+  /* notes */
+  const notes=[];
+  if(E.length===0){
+    notes.push(["🚫","Ban phase tip: <b>ban enablers</b> (Zhang Liang, Donghuang Taiyi, Da Qiao) — divers are only scary when a setup enables them."]);
+    notes.push(["🥇","Pick order tip: blind-pick safe lanes first (Clash / Roam), keep <b>Mid &amp; Jungle for the later picks</b> where counters land hardest."]);
+  }else{
+    if(healN>=2||sus>=3.6)notes.push(["🩸","Rush <b>healing-reduction (anti-heal) items</b> early — their sustain will out-value your damage otherwise."]);
+    if(physShare>=60)notes.push(["🛡️","<b>"+physShare+"%</b> of their damage is physical — <b>armor items and armor boots</b> pay off hugely this game."]);
+    if(magShare>=62)notes.push(["✨","<b>"+magShare+"%</b> of their damage is magic — prioritize <b>magic defense</b> over armor."]);
+    if(cc>=3.6||aocN>=2)notes.push(["💧","Heavy CC draft — <b>tenacity boots</b>, plus a cleanse pick (Zhuangzi, Di Renjie) blunts their whole plan."]);
+    if(steN>=1)notes.push(["👁️","Stealth on the enemy team — <b>group up</b>, avoid solo side-lane walks, let tanks check bushes."]);
+    if(divN>=2||mob>=3.7)notes.push(["🧷","Multiple divers — <b>hold one point-click CC</b> for their entry; don't waste key stuns on their tank."]);
+    if(tnk>=3.6||frN>=3)notes.push(["🗡️","Tanky lineup — <b>penetration / anti-tank items</b>, and protect a true-damage or %HP dealer."]);
+    if(pok>=3.6||pkN>=3)notes.push(["🎯","They want to poke you down — <b>force hard engages</b>; bleeding HP around objectives is losing."]);
+    if(E.length>=3&&tnk<=2.4&&frN===0)notes.push(["💥","No real frontline — group and press engage first; their squishies fold fast."]);
+    if(glbN>=1)notes.push(["🌐","Global ultimates on their side — watch the map when low HP and ping when cross-map threats vanish."]);
+  }
+
+  /* small-draft watch notes — keep the live panel useful from pick #1 */
+  const watch=[];
+  if(E.length){
+    const used=new Set();
+    const pushW=(ic,txt)=>{if(watch.length<3)watch.push([ic,txt]);};
+    const b=E.filter(h=>h.s.bst>=4).sort((x,y)=>TIERBASE[y.tier]-TIERBASE[x.tier])[0];
+    if(b){used.add(b.id);pushW("⚡","<b>"+b.name+"</b> can delete squishies — respect fog of war, never face-check alone.");}
+    const m=E.filter(h=>h.s.mob>=4&&!used.has(h.id)).sort((x,y)=>TIERBASE[y.tier]-TIERBASE[x.tier])[0];
+    if(m){used.add(m.id);pushW("💨","<b>"+m.name+"</b> is ultra-mobile — keep a point-click CC ready for them.");}
+    const he=E.filter(h=>has(h,"heal"))[0];
+    if(he)pushW("🩸","<b>"+he.name+"</b> heals — early anti-heal items punish it hard.");
+    const su=E.filter(h=>has(h,"suppress"))[0];
+    if(su)pushW("🔒","<b>"+su.name+"</b>'s suppression can't be cleansed — bait it with a tank.");
+  }
+  if(E.length&&notes.length<3)notes.push(...watch.filter(w=>!notes.some(n=>n[0]===w[0])).slice(0,3-notes.length));
+
+  /* verdict */
+  let verdictTxt="";
+  if(E.length){
+    const archs=[];
+    if(divN>=2)archs.push("dive your backline"); if(healN>=2)archs.push("out-sustain fights"); if(aocN>=2)archs.push("chain-CC your team");
+    if(pkN>=3)archs.push("poke & siege"); if(frN>=3)archs.push("front-to-back teamfighting"); if(womN>=2)archs.push("wombo-combo your clump");
+    let verdict;
+    if(archs.length)verdict="Their win condition looks like: <b>"+archs.slice(0,2).join(" + ")+"</b>. ";
+    else{const danger=[...E].sort((a,b)=>TIERBASE[b.tier]-TIERBASE[a.tier]).slice(0,2).map(h=>h.name).join(" + ");
+      verdict="Still reading their comp — biggest known threats: <b>"+danger+"</b>. ";}
+    const answers=needs.slice(0,2).map(x=>x.reason).join("; ");
+    verdictTxt=verdict+(answers?("Best answers: <b>"+answers+"</b>."):"keep tapping enemy picks — suggestions sharpen as their comp forms.");
+  }
+
+  /* bans */
+  const archName={heal:"sustain",dive:"dive",aoecc:"CC-chain",frontline:"front-to-back",poke:"poke",wombo:"wombo"};
+  const want=[];
+  if(healN>=2||sus>=3.6)want.push("heal"); if(divN>=2||mob>=3.7)want.push("dive");
+  if(cc>=3.6||aocN>=2)want.push("aoecc"); if(tnk>=3.6||frN>=3)want.push("frontline");
+  if(pok>=3.6||pkN>=3)want.push("poke"); if(womN>=2)want.push("wombo");
+  const usedIds=[...state.enemy,...state.ally].filter(Boolean);
+  let teamBans=HEROES.filter(h=>!usedIds.includes(h.id)&&h.tags.some(t=>want.includes(t)))
+    .map(h=>({h,tags:h.tags.filter(t=>want.includes(t)),s:TIERBASE[h.tier]+h.tags.filter(t=>want.includes(t)).length*5}))
+    .sort((a,b)=>b.s-a.s).slice(0,3);
+  const banSet=new Set(teamBans.map(b=>b.h.id));
+  const topRecs=E.length?scored.slice(0,2).map(r=>r.h.id):[];
+  let protectBans=[];
+  topRecs.forEach(rid=>{(EDGED_BY[rid]||[]).forEach(aid=>{if(!usedIds.includes(aid)&&!banSet.has(aid))protectBans.push({h:byId[aid],vs:byId[rid]});});});
+  protectBans=protectBans.sort((a,b)=>TIERBASE[b.h.tier]-TIERBASE[a.h.tier]).filter((v,i,arr)=>arr.findIndex(x=>x.h.id===v.h.id)===i).slice(0,2);
+  protectBans.forEach(b=>banSet.add(b.h.id));
+  if(!teamBans.length&&!protectBans.length){
+    teamBans=HEROES.filter(h=>!usedIds.includes(h.id)&&(h.tier==="S")).sort((a,b)=>scored.findIndex(r=>r.h.id===a.id)-scored.findIndex(r=>r.h.id===b.id)).slice(0,3)
+      .map(h=>({h,tags:["power"],s:TIERBASE[h.tier]}));
+  }
+
+  return {E,A,profile:{mob,bst,sus,cc,tnk,pok,physShare,magShare,divN,steN,glbN,healN,womN,aocN,frN,pkN},needs,notes,verdictTxt,scored,teamBans,protectBans,archName,covered};
+}
+
+/* =============== LIVE PANEL =============== */
+function renderLive(){
+  const R=computeAnalysis();
+  const sub=$("#liveSub"),picks=$("#livePicks"),bans=$("#liveBans"),notes=$("#liveNotes");
+  if(R.E.length===0&&R.A.length===0){
+    sub.textContent="tap heroes below as they lock in";
+    picks.innerHTML=`<div class="emptyhint">👇 During BP, tap each enemy hero in the tray — <b>top counters appear here instantly</b>.<br>Before any picks: grab a safe blind pick or note the power bans ↓</div>`;
+    bans.innerHTML=`<span style="font-size:10px;color:var(--dim);align-self:center;">Suggested bans:</span>`+
+      R.teamBans.slice(0,3).map(b=>miniBan(b.h)).join("");
+    notes.innerHTML=R.notes.map(x=>`<div class="livenote"><span>${x[0]}</span><span>${x[1]}</span></div>`).join("");
+    return;
+  }
+  sub.textContent=R.E.length+"/5 enemy · live";
+  /* pick one top recommendation per open lane (prefer lanes not yet covered by allies) */
+  const open=LANES.filter(l=>!R.covered.has(l.id));
+  const list=[];
+  open.forEach(l=>{const r=R.scored.find(x=>x.h.lane===l.id);if(r)list.push(r);});
+  R.scored.forEach(r=>{if(list.length<4&&!list.includes(r))list.push(r);});
+  const top=list.slice(0,4);
+  picks.innerHTML=top.map((r,i)=>`
+    <div class="liverow" data-detail="${r.h.id}">
+      <span class="pickn">${i+1}</span>
+      ${avatarHTML(r.h,36,true)}
+      <div class="info">
+        <div class="nm">${esc(r.h.name)} <span class="tier ${r.h.tier}">${r.h.tier}</span> <span class="lchip">${laneInfo(r.h.lane).icon} ${esc(r.h.lane)}</span></div>
+        <div class="rs">${esc(r.why[0]||"strong pick this draft")}</div>
+      </div>
+    </div>`).join("");
+  const allBans=[...R.teamBans.map(b=>({h:b.h})),...R.protectBans.map(b=>({h:b.h}))].slice(0,3);
+  bans.innerHTML=allBans.length?`<span style="font-size:10px;color:var(--dim);align-self:center;">🚫 Ban:</span>`+allBans.map(b=>miniBan(b.h)).join(""):"";
+  notes.innerHTML=R.notes.slice(0,2).map(x=>`<div class="livenote"><span>${x[0]}</span><span>${x[1]}</span></div>`).join("");
+}
+function miniBan(h){return `<span class="liveban" data-detail="${h.id}"><span class="circ avatar ${avClass(h)}" style="width:20px;height:20px;font-size:8.5px">${esc(initials(h.name))}</span>${esc(h.name)}</span>`;}
+
+/* =============== FULL REPORT =============== */
+function meter(label,v){const p=Math.round(v/5*100);return `<div class="meter"><div class="lab"><span>${label}</span><b>${v.toFixed(1)}</b></div><div class="bar"><i style="width:${p}%"></i></div></div>`;}
+function renderFull(){
+  const R=computeAnalysis();
+  if(R.E.length===0){
+    $("#results").innerHTML=`<div class="verdict">👆 Add at least one <b>enemy pick</b> first — tap heroes in the tray above.</div>`;
+    return;
+  }
+  const P=R.profile;
+  let html=`<div class="sect-title">Threat Profile</div>
+  <div class="card">
+    <div class="meters">${meter("Mobility",P.mob)}${meter("Burst",P.bst)}${meter("Sustain",P.sus)}${meter("Crowd Ctrl",P.cc)}${meter("Frontline",P.tnk)}${meter("Poke",P.pok)}</div>
+    <div class="chipline">
+      <span class="chip ${P.physShare>=60?'warn':''}">⚔️ ${P.physShare}% physical</span>
+      <span class="chip ${P.magShare>=62?'warn':''}">✨ ${P.magShare}% magic</span>
+      ${P.divN?`<span class="chip warn">🗡️ ${P.divN} diver${P.divN>1?"s":""}</span>`:""}
+      ${P.steN?`<span class="chip warn">👁️ stealth detected</span>`:""}
+      ${P.glbN?`<span class="chip gold">🌐 ${P.glbN} global ult${P.glbN>1?"s":""}</span>`:""}
+      ${P.healN?`<span class="chip warn">🩸 sustain-heavy</span>`:""}
+      ${P.womN?`<span class="chip warn">💥 wombo potential</span>`:""}
+    </div>
+  </div>
+  <div class="verdict">${R.verdictTxt}</div>`;
+
+  html+=`<div class="sect-title">Recommended Picks</div>`;
+  const showLanes=LANES.filter(l=>!R.covered.has(l.id));
+  (showLanes.length?showLanes:LANES).forEach(l=>{
+    const picks=R.scored.filter(r=>r.h.lane===l.id).slice(0,2);
+    if(!picks.length)return;
+    html+=`<div class="recgroup"><div class="rechead"><div class="ic" style="background:${l.bg}">${l.icon}</div>${l.label}</div>`;
+    picks.forEach(r=>{
+      html+=`<div class="reccard" data-detail="${r.h.id}">
+        ${avatarHTML(r.h,46)}
+        <div class="info">
+          <div class="top"><span class="name">${esc(r.h.name)}</span>
+            <span class="tier ${r.h.tier}">${r.h.tier}</span>
+            <span class="dmgchip">${r.h.dmg==="P"?"PHYS":r.h.dmg==="M"?"MAGIC":"TRUE"}</span>
+            <span class="score">★ ${r.s}</span></div>
+          <div class="reasons">${r.why.length?r.why.map(w=>`<div class="reason">${esc(w)}</div>`).join(""):`<div class="reason">reliable comfort pick for this draft</div>`}</div>
+        </div></div>`;
+    });
+    html+=`</div>`;
+  });
+
+  html+=`<div class="sect-title">Suggested Bans</div>`;
+  R.teamBans.forEach(b=>{
+    const arch=b.tags.map(t=>R.archName[t]).filter(Boolean)[0]||"their overall";
+    const whyTxt=b.tags.includes("power")?("High-priority power pick — strong even without comp info. Deny it."):(esc(b.h.name)+" would complete "+arch+" gameplan for the enemy — deny it while you still can.");
+    html+=`<div class="bancard"><div class="banicon">🚫</div><div class="info"><div class="top"><b>${esc(b.h.name)}</b> <span class="tier ${b.h.tier}">${b.h.tier}</span></div><div class="why">${whyTxt}</div></div></div>`;});
+  R.protectBans.forEach(b=>{
+    html+=`<div class="bancard"><div class="banicon">🛡️</div><div class="info"><div class="top"><b>${esc(b.h.name)}</b> <span class="tier ${b.h.tier}">${b.h.tier}</span></div><div class="why">Hard-counters <b>${esc(b.vs.name)}</b>, one of your recommended picks — ban to keep that lane free.</div></div></div>`;});
+
+  html+=`<div class="sect-title">Game Plan</div>`+R.notes.map(x=>`<div class="note"><div class="ic">${x[0]}</div><p>${x[1]}</p></div>`).join("")
+      +`<div class="note"><div class="ic">📈</div><p>Win = draft edge × execution: track the enemy's key CC cooldowns and play around <b>your</b> power spikes.</p></div>`;
+  $("#results").innerHTML=html;
+}
+
+/* =============== SLOTS =============== */
+function renderSlots(){
+  [["enemy",$("#enemySlots")],["ally",$("#allySlots")]].forEach(([team,el])=>{
+    el.innerHTML=state[team].map((id,i)=>{
+      if(!id)return `<div class="slot empty" data-team="${team}" data-i="${i}"><div class="circ">+</div><div class="nm">&nbsp;</div></div>`;
+      const h=byId[id];
+      return `<div class="slot" data-team="${team}" data-i="${i}">
+        <button class="rm" data-rm="${team}:${i}">×</button>
+        <div class="circ avatar ${avClass(h)}" style="width:53px;height:53px;border:2px solid ${team==='enemy'?'#e14d2e':'#3f8cff'}">${esc(initials(h.name))}</div>
+        <div class="nm">${esc(h.name)}</div></div>`;
+    }).join("");
+  });
+}
+document.addEventListener("click",e=>{
+  const rm=e.target.closest("[data-rm]");
+  if(rm){e.stopPropagation();const [t,i]=rm.dataset.rm.split(":");state.undoStack.push({team:t,i:+i,prev:state[t][+i]});state[t][+i]=null;afterChange();return;}
+  const slot=e.target.closest(".slot");
+  if(slot)openPicker(slot.dataset.team,+slot.dataset.i);
+});
+
+/* =============== SLOT PICKER MODAL =============== */
+function openPicker(team,i){
+  state.pickerTeam=team;state.pickerSlot=i;
+  $("#pickerTitle").textContent=(team==="enemy"?"🔴 Enemy":"🔵 Ally")+" — slot "+(i+1);
+  $("#pickerSearch").value="";renderPicker("");$("#pickerModal").classList.add("open");
+  setTimeout(()=>$("#pickerSearch").focus(),80);
+}
+function renderPicker(q){
+  const used=[...state.enemy,...state.ally].filter(Boolean);
+  const list=HEROES.filter(h=>h.name.toLowerCase().includes(q.toLowerCase()))
+    .sort((a,b)=>hotRank(a)-hotRank(b)||tierRank(a)-tierRank(b)||a.name.localeCompare(b.name));
+  $("#pickerGrid").innerHTML=list.map(h=>`
+    <button class="pcell" data-pick="${h.id}" ${used.includes(h.id)?"disabled":""}>
+      <div class="circ avatar ${avClass(h)}" style="border-radius:16px">${esc(initials(h.name))}</div>
+      <div class="nm">${esc(h.name)}</div><div class="lane">${esc(h.lane)}</div>
+    </button>`).join("");
+}
+$("#pickerSearch").addEventListener("input",e=>renderPicker(e.target.value));
+document.addEventListener("click",e=>{
+  const p=e.target.closest("[data-pick]");
+  if(!p||p.disabled)return;
+  const t=state.pickerTeam,i=state.pickerSlot;
+  state.undoStack.push({team:t,i,prev:state[t][i]});
+  state[t][i]=p.dataset.pick;
+  $("#pickerModal").classList.remove("open");
+  buzz();afterChange();
+});
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>$("#"+b.dataset.close).classList.remove("open")));
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
+
+/* =============== QUICK TRAY =============== */
+function hotRank(h){const i=HOT.indexOf(h.id);return i===-1?999:i;}
+function tierRank(h){return {S:0,A:1,B:2}[h.tier];}
+function renderTray(q){
+  const used=[...state.enemy,...state.ally].filter(Boolean);
+  const list=HEROES.filter(h=>!used.includes(h.id)&&h.name.toLowerCase().includes((q||"").toLowerCase()))
+    .sort((a,b)=>hotRank(a)-hotRank(b)||tierRank(a)-tierRank(b)||a.name.localeCompare(b.name));
+  $("#tray").innerHTML=list.map(h=>`
+    <button class="tile" data-fast="${h.id}">
+      <div class="circ avatar ${avClass(h)} av-sq">${esc(initials(h.name))}${HOT.indexOf(h.id)>-1&&HOT.indexOf(h.id)<10?'<span class="hot">HOT</span>':""}</div>
+      <div class="nm">${esc(h.name)}</div>
+    </button>`).join("");
+}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-fast]");
+  if(!t)return;
+  keepAwake();
+  const team=state.mode;
+  const i=state[team].indexOf(null);
+  if(i===-1){flash(team==="enemy"?"Enemy team full — remove one or switch to My picks":"Your team full — remove one first");return;}
+  state.undoStack.push({team,i,prev:null});
+  state[team][i]=t.dataset.fast;
+  $("#traySearch").value="";
+  buzz();afterChange();
+});
+$("#traySearch").addEventListener("input",e=>renderTray(e.target.value));
+
+/* mode toggle */
+function renderSeg(){
+  $("#segEnemy").className=state.mode==="enemy"?"on-foe":"";
+  $("#segAlly").className=state.mode==="ally"?"on-me":"";
+}
+$("#segEnemy").addEventListener("click",()=>{state.mode="enemy";renderSeg();save();});
+$("#segAlly").addEventListener("click",()=>{state.mode="ally";renderSeg();save();});
+
+/* =============== STATE CHANGE PIPELINE =============== */
+function afterChange(){
+  renderSlots();renderTray($("#traySearch").value);renderLive();
+  renderQTray($("#qSearch").value);renderQuick();
+  save();
+}
+$("#analyzeBtn").addEventListener("click",()=>{renderFull();$("#results").scrollIntoView({behavior:"smooth",block:"start"});});
+function doUndo(){
+  const u=state.undoStack.pop();
+  if(!u){flash("Nothing to undo");return;}
+  state[u.team][u.i]=u.prev;buzz();afterChange();
+}
+function doReset(){
+  state.enemy=[null,null,null,null,null];state.ally=[null,null,null,null,null];
+  state.undoStack=[];$("#results").innerHTML="";afterChange();
+}
+$("#undoBtn").addEventListener("click",doUndo);
+$("#resetBtn").addEventListener("click",doReset);
+
+/* =============== QUICK TAB =============== */
+function qTile(h){
+  return `<button class="tile" data-qfast="${h.id}">
+    <div class="circ avatar ${avClass(h)} av-sq">${esc(initials(h.name))}${HOT.indexOf(h.id)>-1&&HOT.indexOf(h.id)<10?'<span class="hot">HOT</span>':""}</div>
+    <div class="nm">${esc(h.name)}</div></button>`;
+}
+function renderQTray(q){
+  const used=[...state.enemy,...state.ally].filter(Boolean);
+  const list=HEROES.filter(h=>!used.includes(h.id)&&h.name.toLowerCase().includes((q||"").toLowerCase()))
+    .sort((a,b)=>hotRank(a)-hotRank(b)||tierRank(a)-tierRank(b)||a.name.localeCompare(b.name)).slice(0,30);
+  $("#qTray").innerHTML=list.map(qTile).join("");
+}
+function renderQRoles(){
+  $("#qRoles").innerHTML=ROLES.map(r=>`<button class="rchip${state.quickRole===r?" on":""}" data-qrole="${r}">${r==="Any"?"🎲 Any role":laneInfo(r).icon+" "+r}</button>`).join("");
+}
+function renderQuick(){
+  const R=computeAnalysis();
+  const chips=[];
+  state.enemy.forEach((id,i)=>{if(id){const h=byId[id];
+    chips.push(`<span class="qchip" data-qrm="${i}"><span class="circ avatar ${avClass(h)}">${esc(initials(h.name))}</span>${esc(h.name)}<b class="x">×</b></span>`);}});
+  $("#qChips").innerHTML=chips.length?chips.join(""):`<span class="qempty">No enemy picks yet — tap a hero below</span>`;
+  const ans=$("#qAnswer");
+  if(!R.E.length){
+    ans.innerHTML=`<div class="playhint">🎯 Tell me what the enemy picked —<br>your <b>winning hero</b> appears here instantly.</div>
+      <div class="qbanline">🚫 Early ban idea:&nbsp;${R.teamBans.map(b=>miniBan(b.h)).join("")}</div>`;
+    return;
+  }
+  let pool=R.scored;
+  if(state.quickRole!=="Any"){const f=pool.filter(r=>r.h.lane===state.quickRole);if(f.length)pool=f;}
+  const play=pool[0],also=pool.slice(1,3);
+  const roleTag=state.quickRole!=="Any"&&play.h.lane===state.quickRole?`<span class="qrole">fits your role ✔</span>`:"";
+  const allBans=[...R.teamBans.map(b=>b.h),...R.protectBans.map(b=>b.h)].filter((h,i,a)=>a.findIndex(x=>x.id===h.id)===i).slice(0,2);
+  ans.innerHTML=`
+    <div class="playcard" data-detail="${play.h.id}">
+      <div class="plabel">✅ PLAY THIS HERO</div>
+      <div class="pmain">${avatarHTML(play.h,56,true)}
+        <div class="pinfo">
+          <div class="pname">${esc(play.h.name)} <span class="tier ${play.h.tier}">${play.h.tier}</span></div>
+          <div class="psub">${laneInfo(play.h.lane).icon} ${esc(play.h.lane)} lane${roleTag}</div>
+        </div>
+      </div>
+      <div class="reasons">${play.why.slice(0,2).map(w=>`<div class="reason">${esc(w)}</div>`).join("")}</div>
+    </div>
+    ${also.length?`<div class="qalsolab">Also strong:</div>`+also.map(r=>`
+      <div class="liverow" data-detail="${r.h.id}">
+        ${avatarHTML(r.h,34,true)}
+        <div class="info">
+          <div class="nm">${esc(r.h.name)} <span class="tier ${r.h.tier}">${r.h.tier}</span> <span class="lchip">${laneInfo(r.h.lane).icon} ${esc(r.h.lane)}</span></div>
+          <div class="rs">${esc(r.why[0]||"strong pick this draft")}</div>
+        </div>
+      </div>`).join(""):""}
+    <div class="qbanline">🚫 Ban:&nbsp;${allBans.map(h=>miniBan(h)).join("")||"—"}</div>
+    ${R.notes[0]?`<div class="qnote">${R.notes[0][0]} ${R.notes[0][1]}</div>`:""}`;
+}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-qfast]");
+  if(t){keepAwake();const i=state.enemy.indexOf(null);
+    if(i===-1){flash("Enemy team full — tap a chip above to remove one");return;}
+    state.undoStack.push({team:"enemy",i,prev:null});
+    state.enemy[i]=t.dataset.qfast;
+    $("#qSearch").value="";buzz();afterChange();return;}
+  const rm=e.target.closest("[data-qrm]");
+  if(rm){const i=+rm.dataset.qrm;state.undoStack.push({team:"enemy",i,prev:state.enemy[i]});state.enemy[i]=null;buzz();afterChange();return;}
+  const rc=e.target.closest("[data-qrole]");
+  if(rc){state.quickRole=rc.dataset.qrole;renderQRoles();renderQuick();save();}
+});
+$("#qSearch").addEventListener("input",e=>renderQTray(e.target.value));
+$("#qUndo").addEventListener("click",doUndo);
+$("#qReset").addEventListener("click",doReset);
+
+/* =============== HEROES TAB =============== */
+let heroQ="",laneFilter="All";
+function renderHeroes(){
+  const list=HEROES.filter(h=>(laneFilter==="All"||h.lane===laneFilter)&&h.name.toLowerCase().includes(heroQ.toLowerCase()))
+    .sort((a,b)=>LANES.findIndex(l=>l.id===a.lane)-LANES.findIndex(l=>l.id===b.lane)||tierRank(a)-tierRank(b));
+  $("#heroGrid").innerHTML=list.length?list.map(h=>`
+    <div class="hrow" data-detail="${h.id}">
+      ${avatarHTML(h,46)}
+      <div class="info">
+        <div class="name">${esc(h.name)} <span class="tier ${h.tier}">${h.tier}</span></div>
+        <div class="sub">${laneInfo(h.lane).icon} ${esc(h.lane)} · ${h.roles.map(esc).join("/")} · ${h.dmg==="P"?"Physical":h.dmg==="M"?"Magic":"True"}</div>
+        <div class="ministats">
+          <span class="ministat">MOB <b>${h.s.mob}</b></span><span class="ministat">BST <b>${h.s.bst}</b></span>
+          <span class="ministat">SUS <b>${h.s.sus}</b></span><span class="ministat">CC <b>${h.s.cc}</b></span>
+          <span class="ministat">DEF <b>${h.s.tnk}</b></span><span class="ministat">POK <b>${h.s.pok}</b></span>
+        </div>
+      </div><div class="chev">›</div>
+    </div>`).join(""):`<div class="verdict">No heroes match that search.</div>`;
+}
+$("#heroSearch").addEventListener("input",e=>{heroQ=e.target.value;renderHeroes();});
+document.querySelectorAll(".fchip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll(".fchip").forEach(x=>x.classList.remove("on"));c.classList.add("on");
+  laneFilter=c.dataset.lane;renderHeroes();
+}));
+
+/* =============== DETAIL MODAL =============== */
+function vsChip(h,cls){return `<span class="vschip ${cls}" data-detail="${h.id}"><span class="circ avatar ${avClass(h)}" style="width:22px;height:22px;font-size:9px">${esc(initials(h.name))}</span>${esc(h.name)}</span>`;}
+document.addEventListener("click",e=>{
+  const d=e.target.closest("[data-detail]");
+  if(!d)return;openDetail(d.dataset.detail);
+});
+function openDetail(id){
+  const h=byId[id];if(!h)return;
+  const strong=(EDGES[id]||[]).map(x=>byId[x]).filter(Boolean);
+  const weak=(EDGED_BY[id]||[]).map(x=>byId[x]).filter(Boolean);
+  $("#detailSheet").innerHTML=`
+    <div class="grab"></div>
+    <div class="detail-top">
+      ${avatarHTML(h,64)}
+      <div>
+        <div style="font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px;">${esc(h.name)} <span class="tier ${h.tier}">${h.tier}</span></div>
+        <div style="font-size:12px;color:var(--dim);margin-top:3px;">${laneInfo(h.lane).icon} ${esc(h.lane)} Lane · ${h.roles.map(esc).join(" / ")} · <span class="dmgchip">${h.dmg==="P"?"PHYSICAL":h.dmg==="M"?"MAGIC":"TRUE"} DMG</span></div>
+      </div>
+    </div>
+    ${[["MOB","mob"],["BST","bst"],["SUS","sus"],["CC","cc"],["DEF","tnk"],["POK","pok"]].map(([k,sk])=>`<div class="statrow"><span class="k">${k}</span><div class="bar"><i style="width:${h.s[sk]/5*100}%"></i></div><b>${h.s[sk]}</b></div>`).join("")}
+    <div class="chipline" style="margin:12px 0 2px;">${h.tags.map(t=>`<span class="chip">${esc(TAGNAME[t]||t)}</span>`).join("")}</div>
+    <div class="vsblock"><h4>🧠 How to beat ${esc(h.name)}</h4><p style="font-size:13px;line-height:1.55;color:#c6cfe9;">${esc(h.how)}</p></div>
+    ${strong.length?`<div class="vsblock"><h4>✅ ${esc(h.name)} counters</h4><div class="vschips">${strong.map(x=>vsChip(x,"good")).join("")}</div></div>`:""}
+    ${weak.length?`<div class="vsblock"><h4>⚠️ Counterpicks vs ${esc(h.name)}</h4><div class="vschips">${weak.map(x=>vsChip(x,"bad")).join("")}</div></div>`:""}
+    <button class="closebtn" data-close="detailModal">Close</button>`;
+  $("#detailSheet").querySelector("[data-close]").addEventListener("click",()=>$("#detailModal").classList.remove("open"));
+  $("#detailModal").classList.add("open");
+  $("#detailSheet").scrollTop=0;
+}
+
+/* =============== TIPS TAB =============== */
+const TIPS=[
+["🥇","Draft order matters","First-pick safe, blindable heroes (Sun Ce, Dun, Zhuangzi, Di Renjie). Leave Mid/Jungle for late picks — that's where counters hurt most."],
+["🧲","Counter items beat counter picks","Feeling behind? Swap your build: armor vs physical, magic defense vs magic, anti-heal vs sustain. The shop's category filters make this a 2-second decision."],
+["🪝","Hold one CC for the diver","Against Jing, Han Xin, Lam or Lanling, the fight is won by whoever keeps one point-click stun ready. Don't dump everything on their tank."],
+["🫧","Don't clump vs wombo","Princess Frost, Zhen Ji, Angela, Zhang Fei and Guiguzi dream of 5 people in one circle. Fight in spread formations and their ults hit one."],
+["👁️","Play differently vs stealth","Prince of Lanling / Guiguzi punish solo habits. Walk in pairs, hug towers early, let the tank face-check every bush."],
+["⏱️","Respect power spikes","Most assassins hit huge spikes at level 4 and first core item. Track them: play safe at their spike, force fights at yours."],
+["🌊","Waves before fights","Clear your wave before rotating. A pushed wave is free tower damage if you die, and free gold even if the fight never happens."],
+["🔄","Trade, don't coinflip","Enemy 5-manning mid? Take their jungle and a side tower instead of a 4v5. Objectives traded evenly beat fights lost."],
+["🚫","Ban enablers, not carries","Banning Zhang Liang or Donghuang is worth more than banning the 10th diver — divers only win when a setup lets them."],
+["🧠","Review your deaths","After each loss ask once: 'what killed me every time?' Then next game build or position against exactly that. Fastest climb there is."]
+];
+$("#tipList").innerHTML=TIPS.map((t,i)=>`<div class="tipcard"><div class="n">${t[0]}</div><div><h3>${i+1}. ${esc(t[1])}</h3><p>${esc(t[2])}</p></div></div>`).join("");
+
+/* =============== NAV =============== */
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+  ["quick","draft","heroes","tips"].forEach(t=>$("#tab-"+t).hidden=(t!==b.dataset.tab));
+  window.scrollTo({top:0});
+}));
+
+/* help card */
+$("#helpClose").addEventListener("click",()=>{state.helpOff=true;$("#helpCard").style.display="none";save();});
+
+/* ---- PWA: locally = inline manifest; hosted = real manifest + offline cache ---- */
+(function(){
+  try{
+    var l=document.createElement("link");l.rel="manifest";
+    var proto=(typeof location!=="undefined"&&location.protocol)||"file:";
+    if(proto.indexOf("http")===0){
+      l.href="manifest.json";
+      if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
+    }else{
+      var ICON="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Ctext x='32' y='44' font-size='26' text-anchor='middle' fill='%23f5c04a' font-weight='bold'%3EDA%3C/text%3E%3C/svg%3E";
+      var mf={name:"DraftAce — HoK Counter Picks",short_name:"DraftAce",start_url:".",display:"standalone",
+        background_color:"#0b1020",theme_color:"#0b1020",orientation:"portrait",
+        icons:[{src:ICON,sizes:"192x192",type:"image/svg+xml"},{src:ICON,sizes:"512x512",type:"image/svg+xml"}]};
+      l.href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/json"}));
+    }
+    document.head.appendChild(l);
+  }catch(e){}
+})();
+
+/* ---- install card: platform-specific, hides itself once installed ---- */
+(function(){
+  var card=$("#installCard");if(!card)return;
+  var isIOS=/iP(hone|ad|od)/.test((navigator&&navigator.userAgent)||"");
+  var standalone=false;
+  try{standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;}catch(e){}
+  var off=false;try{off=localStorage.getItem("hok_install_off")==="1";}catch(e){}
+  if(standalone||off){card.style.display="none";return;}
+  var hosted=(typeof location!=="undefined"&&location.protocol.indexOf("http")===0);
+  $("#installSteps").innerHTML=isIOS
+    ?(hosted?"Tap <b>Share</b> (□↑) → <b>Add to Home Screen</b>.":"Safari can't install local files. Open the app from its web link instead, then Share → Add to Home Screen.")
+    :(hosted
+      ?"Tap <b>⋮</b> (top-right) → <b>Install app / Add to Home screen</b> → done."
+      :"⚠️ <b>Chrome can't install local files</b> — that's why the option is missing. Either upload this file to <b>catbox.moe</b> and open the link it gives you, or use the GitHub Pages setup from our chat. Then ⋮ → Add to Home screen appears.");
+  $("#installClose").addEventListener("click",function(){card.style.display="none";try{localStorage.setItem("hok_install_off","1");}catch(e){}});
+})();
+
+/* =============== INIT =============== */
+load();
+if(state.helpOff)$("#helpCard").style.display="none";
+renderSeg();renderQRoles();
+document.body.addEventListener("pointerdown",keepAwake,{once:true});
+afterChange();renderHeroes();
+</script>
+</body>
+</html>
